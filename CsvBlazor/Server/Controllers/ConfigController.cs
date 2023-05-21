@@ -12,9 +12,9 @@ namespace CsvBlazor.Server.Controllers
         {
             return new List<ColumnDto>
             {
-                new ColumnDto { Name = "PersonaId", MapTo = "maa" },
-                new ColumnDto { Name = "Nombre", MapTo = "" },
-                new ColumnDto { Name = "Edad", MapTo = "" }
+                new ColumnDto { Name = "PersonaId", ColumnType = ColumnType.String  },
+                new ColumnDto { Name = "DateOfBirth", ColumnType = ColumnType.Date  },
+                new ColumnDto { Name = "Age", ColumnType = ColumnType.String }
             };
         }
     }

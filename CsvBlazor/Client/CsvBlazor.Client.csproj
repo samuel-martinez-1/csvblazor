@@ -16,4 +16,8 @@
     <ProjectReference Include="..\Shared\CsvBlazor.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Data\" />
+  </ItemGroup>
+
 </Project>

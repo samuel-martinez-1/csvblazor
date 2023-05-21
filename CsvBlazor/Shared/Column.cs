@@ -1,15 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace CsvBlazor.Shared
 {
+    // Domain oriented
     public class Columns : List<Column>
     {
-        
+        public bool AnyUnmmaped() => CountUnmmaped() > 0;
+        public int CountUnmmaped() => this.Count(x => !x.IsMapped);
+        public Column? FirstOrDefaultById(Guid id) => this.FirstOrDefault(x => x.Id == id);
+        public Column FirstById(Guid id) => this.First(x => x.Id == id);
+        public bool IsMappedColumnAlreadyUsed(string mapTo) => this.Any(x => x.MapTo == mapTo);
     }
+
     public class Column
     {
         public Column(Guid guid)
@@ -23,14 +30,30 @@ namespace CsvBlazor.Shared
         public Guid Id { get; private set; }
         public string Name { get; set; }
         public string? MapTo { get; set; }
+        public int With { get; set; }
+
+        public bool IsValidWith() => With > 0;
 
         public bool IsMapped => !string.IsNullOrEmpty(MapTo);
+        public void UnSelect()
+        {
+            MapTo = null;
+            With = 0;
+        }
     }
 
-    // Readed from DB
+    // Data transfer object (from DB)
     public class ColumnDto
     {
         public string Name { get; set; }
         public string MapTo { get; set; }
+        public ColumnType ColumnType { get; set; }
+    }
+
+    // Not implemented, yet
+    public enum ColumnType
+    {
+        String,
+        Date,
     }
 }

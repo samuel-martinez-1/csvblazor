@@ -1,4 +1,6 @@
 using CsvBlazor.Client;
+using CsvBlazor.Client.Core;
+using CsvBlazor.Client.Implementations;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
@@ -14,6 +16,7 @@ namespace CsvBlazor.Client
 
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
+            builder.Services.AddSingleton<IUiMessage, ToastrMessage>();
             // enable IHttpClientFactory
             builder.Services.AddHttpClient();
 
