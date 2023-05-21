@@ -1,0 +1,182 @@
+﻿@page "/"
+@using System.Text.RegularExpressions;
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@inject HttpClient httpClient
+
+<PageTitle>Index</PageTitle>
+
+<div>
+    <InputFile OnChange="@OnInputFileChange" class="btn btn-primary" />
+    @if (browserFile != null)
+    {
+        <button class="btn btn-secondary" @onclick="Run"><span class="oi oi-loop-circular" aria-hidden="true" /></button>
+    }
+    @if (columns != null && columns.Count(x => !x.IsMapped) > 0)
+    {
+        <div class="alert alert-warning" role="alert">Unmapped:  @columns.Count(x => !x.IsMapped) </div>
+    }
+    <table class="table table-bordered table-hover table-sm">
+        <thead>
+            <tr>
+                <th>File Column</th>
+                <th>Map To</th>
+                <th>Date Format</th>
+                <th>Column With</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (columns != null)
+            {
+                @foreach (var item in columns)
+                {
+                    <tr>
+                        <td>@item.Name</td>
+                        @if (item.IsMapped)
+                        {
+                            <td><button type="button" class="btn btn-light" @onclick="() => SelectColumn(item.Id)" title="Click to select another column">@item.MapTo</button>
+                                <button type="button" class="btn btn-light" @onclick="() => UnselectColumn(item.Id)" title="Remove mapping">x</button>
+                                </td>
+                        }
+                        else
+                        {
+
+                            <td><button type="button" class="btn btn-secondary" @onclick="() => SelectColumn(item.Id)">Not mapped</button></td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+ 
+    <SearchDialog @ref="SearchDialogBaseReference" CloseEventCallback="ItemSeleccionado"></SearchDialog>
+</div>
+
+@code {
+    protected override Task OnInitializedAsync()
+    {
+        var path = @"C:\Source\smr\datos.csv";
+        //SearchDialogBaseReference.
+        return base.OnInitializedAsync();
+    }
+
+    public SearchDialog SearchDialogBaseReference { get; set; }
+    List<Persona> PersonasList { get; set; } = new List<Persona>();
+
+    List<Column> columns = new List<Column>();
+    IBrowserFile? browserFile = null;
+
+    async Task Run()
+    {
+        if (browserFile == null)
+        {
+            return;
+        }
+        //SpinnerModal.ShowSpinner();
+
+        Regex regex = new Regex(".+\\.csv", RegexOptions.Compiled);
+        if (!regex.IsMatch(browserFile.Name))
+        {
+            Console.WriteLine("no está permitido esa extensión");
+        }
+        else
+        {
+            var stream = browserFile.OpenReadStream();
+            //var all = new List<string[]>();
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            stream.Close();
+            var outputFileString = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+
+            foreach (var item in outputFileString.Split(Environment.NewLine))
+            {
+                var splited = SplitCSV(item.ToString());
+                //Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(splited));
+                if (splited != null && splited.Any())
+                {
+                    columns = beginColumn(splited);
+                    break;
+                }
+            }
+        }
+    }
+
+    List<Column> beginColumn(string[] asArray)
+    {
+        var columns = asArray.Select(x => new Column(Guid.NewGuid())
+            {
+                Name = x
+            });
+        return columns.ToList();
+    }
+
+    public async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        browserFile = e.File;
+        await Run();
+    }
+    private string[] SplitCSV(string input)
+    {
+        Console.WriteLine(input);
+        //Excludes commas within quotes
+        Regex csvSplit = new Regex("(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)", RegexOptions.Compiled);
+        List<string> list = new List<string>();
+        string curr = null;
+        foreach (Match match in csvSplit.Matches(input))
+        {
+            curr = match.Value;
+            if (0 == curr.Length) list.Add("");
+
+            list.Add(curr.TrimStart(','));
+        }
+
+        return list.ToArray();
+    }
+
+    async Task ItemSeleccionado(CloseEvenItem item)
+    {
+        if (item == null)
+            return;
+
+        var column = columns.FirstOrDefault(x => x.Id == item.ExternalId);
+        if (column == null) return;
+
+        column.MapTo = item.Value;
+        SearchDialogBaseReference.Close();
+    }
+
+    async Task SelectColumn(Guid id)
+    {
+        var result = await GetAllInternalColumns();
+        if (result != null && result.Count > 0)
+        {
+            SearchDialogBaseReference.Show(id, result);
+        }
+    }
+    async Task UnselectColumn(Guid id)
+    {
+        var column = columns.First(x => x.Id == id);
+        column.MapTo = null;
+    }
+
+    async Task<List<ColumnDto>> GetAllInternalColumns()
+    {
+        try
+        {
+            var response = await httpClient.GetFromJsonAsync<List<ColumnDto>>("api/config/getInternalColumns");
+            if (response != null)
+            {
+                return response;
+            }
+            else
+            {
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            return null;
+        }
+    }
+}
